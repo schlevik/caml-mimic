@@ -25,6 +25,8 @@ import persistence
 import learn.models as models
 import learn.tools as tools
 
+import wandb
+
 def main(args):
     start = time.time()
     args, model, optimizer, params, dicts = init(args)
@@ -37,7 +39,7 @@ def init(args):
     """
     #need to handle really large text fields
     csv.field_size_limit(sys.maxsize)
-
+    wandb.init(config=args, name=args.run_name)
     #load vocab and other lookups
     desc_embed = args.lmbda > 0
     print("loading lookups...")
@@ -75,7 +77,8 @@ def train_epochs(args, model, optimizer, params, dicts):
             model_dir = os.path.dirname(os.path.abspath(args.test_model))
         metrics_all = one_epoch(model, optimizer, args.Y, epoch, args.n_epochs, args.batch_size, args.data_path,
                                                   args.version, test_only, dicts, model_dir, 
-                                                  args.samples, args.gpu, args.quiet)
+                                                  args.samples, args.gpu, args.quiet, args.save_all)
+        print(metrics_all)
         for name in metrics_all[0].keys():
             metrics_hist[name].append(metrics_all[0][name])
         for name in metrics_all[1].keys():
@@ -112,7 +115,7 @@ def early_stop(metrics_hist, criterion, patience):
         return False
         
 def one_epoch(model, optimizer, Y, epoch, n_epochs, batch_size, data_path, version, testing, dicts, model_dir, 
-              samples, gpu, quiet):
+              samples, gpu, quiet, save_all):
     """
         Wrapper to do a training epoch and test on dev
     """
@@ -146,17 +149,21 @@ def one_epoch(model, optimizer, Y, epoch, n_epochs, batch_size, data_path, versi
 
     #test on dev
     metrics = test(model, Y, epoch, data_path, fold, gpu, version, unseen_code_inds, dicts, samples, model_dir,
-                   testing)
+                   testing, save_all=save_all)
     if testing or epoch == n_epochs - 1:
         print("\nevaluating on test")
         metrics_te = test(model, Y, epoch, data_path, "test", gpu, version, unseen_code_inds, dicts, samples, 
-                          model_dir, True)
+                          model_dir, True, save_all=save_all)
+        wandb.log({'test/{}'.format(k) : v for k,v in metrics.items()}, step=epoch)
+    
     else:
         metrics_te = defaultdict(float)
         fpr_te = defaultdict(lambda: [])
         tpr_te = defaultdict(lambda: [])
     metrics_tr = {'loss': loss}
     metrics_all = (metrics, metrics_te, metrics_tr)
+    wandb.log({'eval/{}'.format(k): v for k,v in metrics.items()}, step=epoch)
+    wandb.log({'train/{}'.format(k): v for k,v in metrics_tr.items()}, step=epoch)
     return metrics_all
 
 
@@ -203,6 +210,8 @@ def train(model, optimizer, Y, epoch, batch_size, data_path, gpu, version, dicts
             #print the average loss of the last 10 batches
             print("Train epoch: {} [batch #{}, batch_size {}, seq length {}]\tLoss: {:.6f}".format(
                 epoch, batch_idx, data.size()[0], data.size()[1], np.mean(losses[-10:])))
+        
+
     return losses, unseen_code_inds
 
 def unseen_code_vecs(model, code_inds, dicts, gpu):
@@ -217,7 +226,7 @@ def unseen_code_vecs(model, code_inds, dicts, gpu):
     model.final.weight.data[code_inds, :] = desc_embeddings.data
     model.final.bias.data[code_inds] = 0
 
-def test(model, Y, epoch, data_path, fold, gpu, version, code_inds, dicts, samples, model_dir, testing):
+def test(model, Y, epoch, data_path, fold, gpu, version, code_inds, dicts, samples, model_dir, testing, save_all):
     """
         Testing loop.
         Returns metrics
@@ -243,6 +252,11 @@ def test(model, Y, epoch, data_path, fold, gpu, version, code_inds, dicts, sampl
     gen = datasets.data_generator(filename, dicts, 1, num_labels, version=version, desc_embed=desc_embed)
     for batch_idx, tup in tqdm(enumerate(gen)):
         data, target, hadm_ids, _, descs = tup
+        if 151432 in hadm_ids:
+            print(data)
+            print(target)
+            print(hadm_ids)
+            assert False
         data, target = Variable(torch.LongTensor(data), volatile=True), Variable(torch.FloatTensor(target))
         if gpu:
             data = data.cuda()
@@ -282,7 +296,9 @@ def test(model, Y, epoch, data_path, fold, gpu, version, code_inds, dicts, sampl
     yhat_raw = np.concatenate(yhat_raw, axis=0)
 
     #write the predictions
-    preds_file = persistence.write_preds(yhat, model_dir, hids, fold, ind2c, yhat_raw)
+    preds_file = persistence.write_preds(yhat, model_dir, hids, fold, ind2c, yhat_raw, save_all_preds=save_all)
+    if save_all:
+        np.save('%s/gt.npy' % model_dir, y)
     #get metrics
     k = 5 if num_labels == 50 else [8,15]
     metrics = evaluation.all_metrics(yhat, y, k=k, yhat_raw=yhat_raw)
@@ -344,6 +360,10 @@ if __name__ == "__main__":
                         help="optional flag to save samples of good / bad predictions")
     parser.add_argument("--quiet", dest="quiet", action="store_const", required=False, const=True,
                         help="optional flag not to print so much during training")
+    parser.add_argument("--run-name", type=str, required=False, dest="run_name", default=None,
+                        help="Name of the run to log to wandb.")
+    parser.add_argument("--save-all", dest="save_all", action="store_const", required=False, const=True,
+                        help="Flag to save all predictions in a .npy file.")
     args = parser.parse_args()
     command = ' '.join(['python'] + sys.argv)
     args.command = command

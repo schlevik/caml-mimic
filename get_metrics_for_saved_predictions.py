@@ -21,6 +21,7 @@ if len(sys.argv) < 2:
     sys.exit(0)
 
 model_dir = sys.argv[1]
+print(model_dir)
 dset = model_dir[model_dir.index('mimic'):]
 parts = dset.split('_')
 
@@ -58,9 +59,9 @@ with open(test_file, 'r') as f:
         codes = set([c2ind[c] for c in row[3].split(';')])
         golds[row[1]] = codes
 
-have_scores = os.path.exists('%s/pred_scores_test.json' % model_dir)
+have_scores = os.path.exists('%s/pred_100_scores_test.json' % model_dir)
 if have_scores:
-    with open('%s/pred_scores_test.json' % model_dir, 'r') as f:
+    with open('%s/pred_100_scores_test.json' % model_dir, 'r') as f:
         scors = json.load(f)
         
 hadm_ids = sorted(set(golds.keys()).intersection(set(preds.keys())))
@@ -80,7 +81,9 @@ for i,hadm_id in tqdm(enumerate(hadm_ids)):
     if have_scores:
         yhat_raw_inds = [scors[hadm_id][ind2c[j]] if ind2c[j] in scors[hadm_id] else 0 for j in range(num_labels)]
         yhat_raw[i] = yhat_raw_inds
-   
+
+print(np.nonzero(y[0]))
+
 if version == "mimic3" and Y == "full":
     print("evaluating code-type metrics")
     diag_preds, diag_golds, proc_preds, proc_golds, golds, preds, hadm_ids, type_dicts = evaluation.results_by_type(Y, model_dir, version)
@@ -91,7 +94,8 @@ if version == "mimic3" and Y == "full":
 
 k = [5] if Y == 50 else [8,15]
 print("evaluating all other metrics")
-metrics = evaluation.all_metrics(yhat, y, k=k, yhat_raw=yhat_raw)
+#yhat_raw = np.load('%s/pred_all_scores_test.npy' % model_dir)
+metrics = evaluation.all_metrics(yhat, y, k=k, yhat_raw=yhat_raw, calc_auc=True)
 
 evaluation.print_metrics(metrics)
 

@@ -12,16 +12,17 @@ import pandas as pd
 
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
-def concat_data(labelsfile, notes_file):
+def concat_data(labelsfile, notes_file, mode='normal'):
     """
         INPUTS:
             labelsfile: sorted by hadm id, contains one label per line
             notes_file: sorted by hadm id, contains one note per line
     """
     with open(labelsfile, 'r') as lf:
+        m3dir = MIMIC_3_DIR + '-' + mode if mode != 'normal' else MIMIC_3_DIR
         print("CONCATENATING")
         with open(notes_file, 'r') as notesfile:
-            outfilename = '%s/notes_labeled.csv' % MIMIC_3_DIR
+            outfilename = '%s/notes_labeled.csv' % m3dir
             with open(outfilename, 'w') as outfile:
                 w = csv.writer(outfile)
                 w.writerow(['SUBJECT_ID', 'HADM_ID', 'TEXT', 'LABELS'])
@@ -42,8 +43,9 @@ def concat_data(labelsfile, notes_file):
                     
     return outfilename
 
-def split_data(labeledfile, base_name):
+def split_data(labeledfile, base_name, mode='normal'):
     print("SPLITTING")
+    m3dir = MIMIC_3_DIR + '-' + mode if mode != 'normal' else MIMIC_3_DIR
     #create and write headers for train, dev, test
     train_name = '%s_train_split.csv' % (base_name)
     dev_name = '%s_dev_split.csv' % (base_name)
@@ -60,12 +62,15 @@ def split_data(labeledfile, base_name):
     #read in train, dev, test splits
     for splt in ['train', 'dev', 'test']:
         hadm_ids[splt] = set()
-        with open('%s/%s_full_hadm_ids.csv' % (MIMIC_3_DIR, splt), 'r') as f:
+        with open('%s/%s_full_hadm_ids.csv' % (m3dir, splt), 'r') as f:
             for line in f:
                 hadm_ids[splt].add(line.rstrip())
 
     with open(labeledfile, 'r') as lf:
         reader = csv.reader(lf)
+        trainwriter = csv.writer(train_file, quoting=csv.QUOTE_NONNUMERIC)
+        devwriter = csv.writer(dev_file, quoting=csv.QUOTE_NONNUMERIC)
+        testwriter = csv.writer(test_file, quoting=csv.QUOTE_NONNUMERIC)
         next(reader)
         i = 0
         cur_hadm = 0
@@ -77,11 +82,14 @@ def split_data(labeledfile, base_name):
             hadm_id = row[1]
 
             if hadm_id in hadm_ids['train']:
-                train_file.write(','.join(row) + "\n")
+                #train_file.write(','.join(row) + "\n")
+                trainwriter.writerow(row)
             elif hadm_id in hadm_ids['dev']:
-                dev_file.write(','.join(row) + "\n")
+                #dev_file.write(','.join(row) + "\n")
+                devwriter.writerow(row)
             elif hadm_id in hadm_ids['test']:
-                test_file.write(','.join(row) + "\n")
+                #test_file.write(','.join(row) + "\n")
+                testwriter.writerow(row)
 
             i += 1
 

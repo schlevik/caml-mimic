@@ -12,9 +12,8 @@ import operator
 from collections import defaultdict
 from scipy.sparse import csr_matrix
 
-from constants import DATA_DIR, MIMIC_3_DIR
 
-def build_vocab(vocab_min, infile, vocab_filename):
+def build_vocab(vocab_min, infile, vocab_filename, big=0):
     """
         INPUTS:
             vocab_min: how many documents a word must appear in to be kept
@@ -41,7 +40,7 @@ def build_vocab(vocab_min, infile, vocab_filename):
         #build lookup table for terms
         num2term = {}
         #preallocate array to hold number of notes each term appears in
-        note_occur = np.zeros(400000, dtype=int)
+        note_occur = np.zeros(big if big else 400000, dtype=int)
         i = 0
         for row in reader:
             text = row[2]
