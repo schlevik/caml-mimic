@@ -1,0 +1,44 @@
+name: Create and Publish BentoML Service
+
+on:
+  push:
+    tags: ["o*.*.*"]
+
+
+jobs:
+  onnx-build:
+    name: Build container image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Setup conda Environment
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: caml2
+          environment-file: environment2.yml
+          python-version: 3.8
+          auto-activate-base: true
+      - name: Get tag
+        id: tag
+        uses: dawidd6/action-get-tag@v1
+      - name: Log into registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR_ENDPOINT }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - name: trace onnx model and publish artefact
+        shell: bash -l {0}
+        run: |
+          echo "https://api.github.com/${{ github.owner }}/${{ github.repository }}/releases/${{ steps.tag.outputs.tag }}"
+          PYTHONPATH=. python learn/trace_onnx.py conv_attn dicts.json label_desc.json --filter-size 10 --num-filter-maps 50 --test-model ./predictions/reproCAML_mimic3_full/model.pth --out-file caml-${{ steps.tag.outputs.tag }}.onnx
+      - name: Upload release binary
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: https://api.github.com/${{ github.owner }}/${{ github.repository }}/releases/${{ steps.tag.outputs.tag }}
+          asset_path: caml-${{ steps.tag.outputs.tag }}.onnx
+          asset_name: caml-model
+          asset_content_type: application/octet-stream
