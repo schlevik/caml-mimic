@@ -49,6 +49,7 @@ def main(args):
 
 
     def get_preds(txt, k):
+        label_desc = dicts['desc']
         text = [
             int(w2ind[w] + 1) if w in w2ind else len(w2ind) + 1 for w in txt.split()
         ]  # OOV words are given a unique index at end of vocab lookup
