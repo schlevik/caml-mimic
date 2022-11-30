@@ -4,7 +4,6 @@ on:
   push:
     tags: ["b*.*.*"]
 
-
 env:
   IMAGE_NAME: caml-bento
   BENTO_NAME: caml_classifier
@@ -14,11 +13,10 @@ jobs:
     name: Build container image
     runs-on: ubuntu-latest
     steps:
-      
       - name: Checkout repository
         uses: actions/checkout@v2
       - name: Setup conda Environment
-        uses: conda-incubator/setup-miniconda@v2 
+        uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: caml2
           environment-file: environment2.yml
@@ -33,27 +31,20 @@ jobs:
           login-server: ${{ secrets.ACR_ENDPOINT }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
-      - - name: Export Bento Model and Push to Docker
-          shell: bash -l {0}
-          run: |
-            PYTHONPATH=. python learn/cli.py conv_attn dicts.json label_desc.json --filter-size 10 --num-filter-maps 50 --test-model ./predictions/reproCAML_mimic3_full/model.pth --save-model > tag
-            export CAML_TAG=`cat tag`
-            bentoml build
-            bentoml build > build_tag
-            export CAML_BUILD_TAG=`export CLASSIFIER_TAG=`tail -n 1 build | cut -d '"' -f2`
-            bentoml containerize $CAML_BUILD_TAG
-            docker tag $BENTO_NAME:$CAML_BUILD_TAG ${{ secrets.ACR_ENDPOINT }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }} 
-            docker push ${{ secrets.ACR_ENDPOINT }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}
-      # - name: Build & Push
-      #   uses: docker/build-push-action@v2
-      #   with:
-      #     push: true
-      #     build-args: |
-      #       version=${{ steps.tag.outputs.tag }}
-      #     tags: ${{ secrets.ACR_ENDPOINT }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}
+      - name: Export Bento Model and Push to Docker
+        shell: bash -l {0}
+        run: |
+          PYTHONPATH=. python learn/cli.py conv_attn dicts.json label_desc.json --filter-size 10 --num-filter-maps 50 --test-model ./predictions/reproCAML_mimic3_full/model.pth --save-model > tag
+          export CAML_TAG=`cat tag`
+          bentoml build
+          bentoml build > build_tag
+          export CAML_BUILD_TAG=`export CLASSIFIER_TAG=`tail -n 1 build | cut -d '"' -f2`
+          bentoml containerize $CAML_BUILD_TAG
+          docker tag $BENTO_NAME:$CAML_BUILD_TAG ${{ secrets.ACR_ENDPOINT }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }} 
+          docker push ${{ secrets.ACR_ENDPOINT }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}
       - name: Deploy
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ env.IMAGE_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_BENTO }}
-          images: '${{ secrets.ACR_ENDPOINT }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}'
+          images: "${{ secrets.ACR_ENDPOINT }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}"
