@@ -38,9 +38,10 @@ jobs:
           export CAML_TAG=`cat tag`
           bentoml build
           bentoml build > build_tag
-          export CLASSIFIER_TAG=`tail -n 1 build | cut -d '"' -f2`
+          export CAML_BUILD_TAG=`tail -n 1 build | cut -d '"' -f2`
           bentoml containerize $CAML_BUILD_TAG
-          docker tag $BENTO_NAME:$CAML_BUILD_TAG ${{ secrets.ACR_ENDPOINT }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }} 
+          echo "tagging ${{ BENTO_NAME }}:$CAML_BUILD_TAG"
+          docker tag ${{ BENTO_NAME }}:$CAML_BUILD_TAG ${{ secrets.ACR_ENDPOINT }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }} 
           docker push ${{ secrets.ACR_ENDPOINT }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}
       - name: Deploy
         uses: azure/webapps-deploy@v2
