@@ -43,7 +43,8 @@ def main(args):
     if args.save_model:
         dicts["label_desc"] = label_desc
         saved_model = bentoml.pytorch.save_model("caml", model, custom_objects=dicts)
-        print(saved_model)
+        print(saved_model.tag)
+        return 
         
 
 
