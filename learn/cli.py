@@ -33,15 +33,15 @@ def main(args):
         dicts["ind2w"] = {int(k): v for k, v in dicts["ind2w"].items()}  # stupid json
         dicts["ind2c"] = {int(k): v for k, v in dicts["ind2c"].items()}  # stupid json
 
-    with open(args.label_description, "r") as f:
-        label_desc = json.load(f)
+    # with open(args.label_description, "r") as f:
+    #     label_desc = json.load(f)
 
     model = tools.pick_model(args, dicts)
 
     model.eval()
     w2ind, ind2c = dicts["w2ind"], dicts["ind2c"]
     if args.save_model:
-        dicts["label_desc"] = label_desc
+        # dicts["label_desc"] = label_desc
         saved_model = bentoml.pytorch.save_model("caml", model, custom_objects=dicts)
         print(saved_model.tag)
         return 

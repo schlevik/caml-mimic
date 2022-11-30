@@ -27,7 +27,7 @@ TAG = os.environ.get("CAML_TAG", "caml:hv2545dlt6zj5h5i")
 model = bentoml.pytorch.get(TAG)
 print(model)
 dicts = model.custom_objects
-w2ind, ind2c, label_desc = dicts["w2ind"], dicts["ind2c"], dicts["label_desc"]
+w2ind, ind2c, label_desc = dicts["w2ind"], dicts["ind2c"], dicts["desc"]
 
 caml_runner: bentoml.Runner = model.to_runner()
 print(caml_runner.models[0])
