@@ -22,7 +22,7 @@ from flask_cors import CORS, cross_origin
 
 import bentoml
 
-import onnxruntime as ort
+#import onnxruntime as ort
 
 # HADMID 120233
 TEXT = "admission date discharge date date of birth sex m service surgery allergies patient recorded as having no known allergies to drugs attending first name3 lf chief complaint hand fracture major surgical or invasive procedure none history of present illness y o man s p motorcycle crash vs car the patient was reportedly wearing a helmet however it was found feet from the pt at the scene the pt was found unresponsive by paramedics at the scene with uneven pupils after bag mask ventilation the pt became responsive with equal and reactive pupils he then became highly combative his gcs was however he was intubated for severe agitation and transported to osh he was then transported to the ed at hospital1 and found to have 2mm punctate hemorrhages in his left frontal lobe per the ct report from the osh pt also sustained a left wrist fracture and lacerations to his hands the patient remains intubated and sedated past medical history unknown social history n c family history n c physical exam ra nad aaox3 rrr ctab abd soft nt nd bs pertinent results wbc rbc hgb hct mcv mch mchc rdw plt ct pt ptt inr pt fibrino urean creat lipase asa neg ethanol neg acetmnp neg bnzodzp neg barbitr neg tricycl neg type art temp po2 pco2 ph caltco2 base xs intubat intubated lactate wbc rbc hgb hct mcv mch mchc rdw plt ct glucose urean creat na k cl hco3 angap calcium phos mg brief hospital course 21m mcc vs car and intubated in the field due to aggitation was admitted on hospital1 on discharge medications acetaminophen mg tablet sig two tablet po q4h every hours as needed discharge disposition home discharge diagnosis small punctate intracranial hemorrhages in the frontal lobe 2nd and 3rd metacarpal fracture of the left hand degloving injury of right hand discharge condition patient is hemodynamically stable tolerated a regular diet with normal and stable vital signs discharge instructions go to the emergency department or see your own doctor right away if any problems develop including the following your pain gets worse you develop pain numbness tingling or weakness in your arms or legs you lose control of your bowels or urine passing water trouble walking your pain is not getting better after days anything else that worries you regarding your wounds please present to the ed if watch carefully for signs of infection redness warmth increasing pain swelling drainage of pus thick white yellow or green liquid or fevers if you have numbness pins and needles or pain in the area of your injury the stitches are loose or the wound is opening up followup instructions regarding your left hand fractures and neck follow up with orthospine dr last name stitle in orthopedics in two weeks please call telephone fax to make an appointment regarding your hand injuries please follow up with plastic surgery this tuesday in their hand clinic telephone fax completed by"
@@ -34,15 +34,12 @@ def main(args):
         dicts["ind2w"] = {int(k): v for k, v in dicts["ind2w"].items()}  # stupid json
         dicts["ind2c"] = {int(k): v for k, v in dicts["ind2c"].items()}  # stupid json
 
-    with open(args.label_description, "r") as f:
-        label_desc = json.load(f)
 
     model = tools.pick_model(args, dicts)
 
     model.eval()
-    w2ind, ind2c = dicts["w2ind"], dicts["ind2c"]
+    w2ind = dicts["w2ind"]
     print(len(w2ind))
-    dicts["label_desc"] = label_desc
     text = [
         int(w2ind[w] + 1) if w in w2ind else len(w2ind) + 1 for w in TEXT.split()
     ]  # OOV words are given a unique index at end of vocab lookup
@@ -59,18 +56,18 @@ def main(args):
         print(model)
 
         torch.onnx.export(
-            model, data, "caml.onnx", verbose=True, input_names=["x"], output_names=["yhat", "loss", "alpha"]
+            model, data, args.out_file, verbose=True, input_names=["x"], output_names=["yhat", "loss", "alpha"]
         )
 
         outputs_raw = model(data)
 
-    ort_session = ort.InferenceSession("caml.onnx")
-    outputs = ort_session.run(
-        None,
-        {"x": np.random.randn(1, 2500).astype(np.int32)},
-    )
-    print(outputs[0])
-    print(outputs_raw)
+    # ort_session = ort.InferenceSession("caml.onnx")
+    # outputs = ort_session.run(
+    #     None,
+    #     {"x": np.random.randn(1, 2500).astype(np.int32)},
+    # )
+    # print(outputs[0])
+    # print(outputs_raw)
 
 
 if __name__ == "__main__":
@@ -288,12 +285,12 @@ if __name__ == "__main__":
         help="optional flag not to print so much during training",
     )
     parser.add_argument(
-        "--save-model",
-        dest="save_model",
-        action="store_const",
+        "--out-file",
+        dest='out_file',
+        type=str,
+        default='caml.onnx',
         required=False,
-        const=True,
-        help="optional flag not to print so much during training",
+        help="Output file name of the traced model.",
     )
 
     args = parser.parse_args()
