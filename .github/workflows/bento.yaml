@@ -35,13 +35,13 @@ jobs:
         shell: bash -l {0}
         run: |
           PYTHONPATH=. python learn/cli.py conv_attn dicts.json label_desc.json --filter-size 10 --num-filter-maps 50 --test-model ./predictions/reproCAML_mimic3_full/model.pth --save-model > tag
-          export CAML_TAG=`cat tag`
-          bentoml build
+          export CAML_TAG_ARG=`cat tag`
+          echo "Model tag: $CAML_TAG_ARG"
           bentoml build > build_tag
           export CAML_BUILD_TAG=`tail -n 1 build_tag | cut -d '"' -f2`
           echo "containerizing $CAML_BUILD_TAG"
-          bentoml containerize $CAML_BUILD_TAG
-          echo "tagging $$CAML_BUILD_TAG"
+          bentoml containerize $CAML_BUILD_TAG --build-arg caml_tag_arg=$CAML_TAG_ARG
+          echo "tagging $CAML_BUILD_TAG"
           docker tag $CAML_BUILD_TAG ${{ secrets.ACR_ENDPOINT }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }} 
           docker push ${{ secrets.ACR_ENDPOINT }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}
       - name: Deploy

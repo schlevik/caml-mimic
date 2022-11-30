@@ -1,0 +1,7 @@
+{% extends bento_base_template %}
+{% block SETUP_BENTO_COMPONENTS %}
+{{ super() }}
+ARG caml_tag_arg
+RUN echo "SETTING CAML TAG TO $CAML_TAG"
+ENV CAML_TAG_ARG=${caml_tag_arg}
+{% endblock %}
