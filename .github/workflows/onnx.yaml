@@ -63,4 +63,4 @@ jobs:
       - name: Notify Frontend of new release
         shell: bash -l {0}
         run: |
-          curl -XPOST -u "${{ secrets.PAT_USERNAME}}:${{secrets.PAT_TOKEN}}" -H "Accept: application/vnd.github.everest-preview+json" -H "Content-Type: application/json" https://api.github.com/repos/${{env.FRONTEND_REPO}}/dispatches --data '{"event_type":"new-artefact-created","client_payload":{"url":"https://github.com/${{github.repository}}/releases/download/${{ steps.tag.outputs.tag }}/${{env.ASSET_NAME}}","version":"${{ steps.tag.outputs.tag }}"}'
+          curl -X POST -H "Accept: application/vnd.github.everest+json" -H "Authorization: Bearer ${{ secrets.REPO_TOKEN }}" https://api.github.com/repos/${{env.FRONTEND_REPO}}/dispatches --data '{"event_type":"new-artefact-created","client_payload":{"url":"https://github.com/${{github.repository}}/releases/download/${{ steps.tag.outputs.tag }}/${{env.ASSET_NAME}}","version":"${{ steps.tag.outputs.tag }}","url_dicts":"https://github.com/${{github.repository}}/releases/download/${{ steps.tag.outputs.tag }}/dicts"}'
