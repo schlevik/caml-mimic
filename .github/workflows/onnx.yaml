@@ -2,7 +2,7 @@ name: Create and Publish BentoML Service
 
 on:
   push:
-    tags: ["o*.*.*"]
+    tags: ["v*.*.*"]
 
 env:
   FRONTEND_REPO: schlevik/caml-static

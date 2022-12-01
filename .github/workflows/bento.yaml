@@ -2,7 +2,7 @@ name: Create and Publish BentoML Service
 
 on:
   push:
-    tags: ["b*.*.*"]
+    tags: ["v*.*.*"]
 
 env:
   IMAGE_NAME: caml-bento
