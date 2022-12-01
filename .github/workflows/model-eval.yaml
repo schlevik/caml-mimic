@@ -42,12 +42,8 @@ jobs:
         id: eval
         shell: bash -l {0}
         run: |
-          PYTHONPATH=. python learn/training.py data/train_full.csv data/vocab.csv full conv_attn 200 --filter-size 10 --num-filter-maps 50 --test-model ${{ env.MODEL_PATH }} --run-name "github-actions-${{ github.event.pull_request.head.sha }}" | tail -n 14 | head -n 10 > stats
-      - name: cat the stats
-        uses: mkungla/actions-set-text-output@v1
-        id: cat-stats
-        with:
-          text: $(cat stats)  
+          PYTHONPATH=. python learn/training.py data/train_full.csv data/vocab.csv full conv_attn 200 --filter-size 10 --num-filter-maps 50 --test-model ${{ env.MODEL_PATH }} --run-name "github-actions-${{ github.event.pull_request.head.sha }}" | tail -n 14 | head -n 10 > output
+          echo "stats=`cat stats`" >> $GITHUB_OUTPUT
       - name: Create comment
         uses: peter-evans/create-or-update-comment@v2
         with:
@@ -55,7 +51,6 @@ jobs:
           body: |
             Eval score:
             ```
-            ${{ steps.cat-stats.outputs.value }}
+            ${{ steps.eval.outputs.stats }}
             ```
-            [1]: https://github.com/peter-evans/create-or-update-comment
         # PYTHONPATH=. python learn/training.py train_full.csv vocab.csv full conv_attn 200 --filter-size 10 --num-filter-maps 50 --dropout 0.2 --patience 10 --lr 0.0001 --test-model predictions/reproCAML_mimic3_full/model.pth
