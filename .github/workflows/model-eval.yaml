@@ -21,13 +21,13 @@ jobs:
           environment-file: environment2.yml
           python-version: 3.8
           auto-activate-base: false
-      - name: Evaluate model
-        id: eval
+      - name: Setup DVC remote
+        id: dvc-setup
         shell: bash -l {0}
         run: |
           dvc remote modify --local mimic connection_string ${{ secrets.AZURE_CONNECTION_STRING }}
-      - name: Evaluate model
-        id: eval
+      - name: Pull data
+        id: dvc-pull
         shell: bash -l {0}
         run: |
           dvc pull
