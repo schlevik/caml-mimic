@@ -1,0 +1,4 @@
+outs:
+- md5: 2f241f33818068fe5fd2b2b1121a4efd
+  size: 463354
+  path: vocab.csv
