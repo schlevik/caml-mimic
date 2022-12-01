@@ -1,0 +1,7 @@
+[cache]
+    type = symlink
+[core]
+    remote = mimic
+['remote "mimic"']
+    url = azure://mimic
+    account_name = camlmimic

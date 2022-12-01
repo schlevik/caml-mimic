@@ -1,0 +1,59 @@
+name: Evaluate model on Pull request
+
+on:
+  pull_request:
+    types: ["opened", "reopened", "synchronize"]
+
+env:
+  MODEL_PATH: predictions/reproCAML_mimic3_full/model.pth
+
+jobs:
+  build:
+    name: Evaluate model and post comment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Setup conda Environment
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: caml
+          environment-file: environment2.yml
+          python-version: 3.8
+          auto-activate-base: false
+      - name: Log into wandb
+        id: wandb-login
+        shell: bash -l {0}
+        run: |
+          echo 'machine api.wandb.ai' >> ~/.netrc
+          echo '  login user' >> ~/.netrc
+          echo "  password ${{ secrets.WANDB_TOKEN }}" >> ~/.netrc
+      - name: Setup DVC remote
+        id: dvc-setup
+        shell: bash -l {0}
+        run: |
+          dvc remote modify --local mimic connection_string '${{ secrets.AZURE_CONNECTION_STRING }}'
+      - name: Pull
+        id: dvc-pull
+        shell: bash -l {0}
+        run: |
+          dvc pull
+      - name: Evaluate model
+        id: eval
+        shell: bash -l {0}
+        run: |
+          PYTHONPATH=. python learn/training.py data/train_full.csv data/vocab.csv full conv_attn 200 --filter-size 10 --num-filter-maps 50 --test-model ${{ env.MODEL_PATH }} --run-name "github-actions-${{ github.event.pull_request.head.sha }}" | tail -n 14 | head -n 10 > output
+          MY_STRING=`cat output`
+          echo "MY_STRING<<EOF" >> $GITHUB_ENV
+          echo "$MY_STRING" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+      - name: Create comment
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          issue-number: ${{ github.event.number }}
+          body: |
+            Eval score:
+            ```
+            ${{ env.MY_STRING }}
+            ```
+        # PYTHONPATH=. python learn/training.py train_full.csv vocab.csv full conv_attn 200 --filter-size 10 --num-filter-maps 50 --dropout 0.2 --patience 10 --lr 0.0001 --test-model predictions/reproCAML_mimic3_full/model.pth

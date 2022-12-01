@@ -35,7 +35,6 @@ class Batch:
         labels_idx = np.zeros(num_labels)
         labelled = False
         desc_vecs = []
-        print(row)
         #get codes as a multi-hot vector
         for l in row[3].split(';'):
             if l in c2ind.keys():
@@ -44,8 +43,6 @@ class Batch:
                 cur_code_set.add(code)
                 labelled = True
         if not labelled:
-            print("KEK")
-            assert False
             return
         if self.desc_embed:
             for code in cur_code_set:
