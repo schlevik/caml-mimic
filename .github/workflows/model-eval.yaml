@@ -26,14 +26,27 @@ jobs:
         shell: bash -l {0}
         run: |
           dvc remote modify --local mimic connection_string ${{ secrets.AZURE_CONNECTION_STRING }}
+      - name: Evaluate model
+        id: eval
+        shell: bash -l {0}
+        run: |
           dvc pull
-          PYTHONPATH=. CUDA_VISIBLE_DEVICES=1 WANDB_MODE='disabled'  python learn/training.py mimicdata/mimic3/train_full.csv mimicdata/mimic3/vocab.csv full conv_attn 200 --filter-size 10 --num-filter-maps 50 --test-model predictions/reproCAML_mimic3_full/model.pth --gpu | tail -n 14 | head -n 10 >> $GITHUB_OUTPUT
+      - name: Evaluate model
+        id: eval
+        shell: bash -l {0}
+        run: |
+          PYTHONPATH=. python learn/training.py data/train_full.csv data/vocab.csv full conv_attn 200 --filter-size 10 --num-filter-maps 50 --test-model ${{ env.MODEL_PATH }} | tail -n 14 | head -n 10 > stats
+          MY_STRING=`cat stats`
+          MY_STRING="${MY_STRING//'%'/'%25'}"
+          MY_STRING="${MY_STRING//$'\n'/'%0A'}"
+          MY_STRING="${MY_STRING//$'\r'/'%0D'}"
+          echo "stats=$MY_STRING" >> $GITHUB_OUTPUT
       - name: Create comment
         uses: peter-evans/create-or-update-comment@v2
         with:
           issue-number: ${{ github.event.number }}
           body: |
             Eval score: 
-            ${{ steps.eval.outputs.accuracy }}
+            ${{ steps.eval.outputs.stats }}
             [1]: https://github.com/peter-evans/create-or-update-comment
         # PYTHONPATH=. python learn/training.py train_full.csv vocab.csv full conv_attn 200 --filter-size 10 --num-filter-maps 50 --dropout 0.2 --patience 10 --lr 0.0001 --test-model predictions/reproCAML_mimic3_full/model.pth
