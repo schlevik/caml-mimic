@@ -21,6 +21,13 @@ jobs:
           environment-file: environment2.yml
           python-version: 3.8
           auto-activate-base: false
+      - name: Log into wandb
+        id: wandb-login
+        shell: bash -l {0}
+        run: |
+          echo 'machine api.wandb.ai' >> ~/.netrc
+          echo '  login user' >> ~/.netrc
+          echo "  password ${{ secrets.WANDB_TOKEN }}" >> ~/.netrc
       - name: Setup DVC remote
         id: dvc-setup
         shell: bash -l {0}
@@ -35,7 +42,7 @@ jobs:
         id: eval
         shell: bash -l {0}
         run: |
-          PYTHONPATH=. python learn/training.py data/train_full.csv data/vocab.csv full conv_attn 200 --filter-size 10 --num-filter-maps 50 --test-model ${{ env.MODEL_PATH }} | tail -n 14 | head -n 10 > stats
+          PYTHONPATH=. python learn/training.py data/train_full.csv data/vocab.csv full conv_attn 200 --filter-size 10 --num-filter-maps 50 --test-model ${{ env.MODEL_PATH }} --run-name "github-actions-${{ github.event.pull_request.head.sha }}" | tail -n 14 | head -n 10 > stats
           MY_STRING=`cat stats`
           MY_STRING="${MY_STRING//'%'/'%25'}"
           MY_STRING="${MY_STRING//$'\n'/'%0A'}"
