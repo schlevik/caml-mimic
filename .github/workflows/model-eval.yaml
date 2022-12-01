@@ -12,56 +12,41 @@ jobs:
     name: Evaluate model and post comment
     runs-on: ubuntu-latest
     steps:
-      - name: create string
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Setup conda Environment
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: caml
+          environment-file: environment2.yml
+          python-version: 3.8
+          auto-activate-base: false
+      - name: Log into wandb
+        id: wandb-login
+        shell: bash -l {0}
         run: |
-          MY_STRING=$(cat << EOF
-          first line
-          second line
-          third line
-          EOF
-          )
+          echo 'machine api.wandb.ai' >> ~/.netrc
+          echo '  login user' >> ~/.netrc
+          echo "  password ${{ secrets.WANDB_TOKEN }}" >> ~/.netrc
+      - name: Setup DVC remote
+        id: dvc-setup
+        shell: bash -l {0}
+        run: |
+          dvc remote modify --local mimic connection_string '${{ secrets.AZURE_CONNECTION_STRING }}'
+      - name: Pull
+        id: dvc-pull
+        shell: bash -l {0}
+        run: |
+          dvc pull
+      - name: Evaluate model
+        id: eval
+        shell: bash -l {0}
+        run: |
+          PYTHONPATH=. python learn/training.py data/train_full.csv data/vocab.csv full conv_attn 200 --filter-size 10 --num-filter-maps 50 --test-model ${{ env.MODEL_PATH }} --run-name "github-actions-${{ github.event.pull_request.head.sha }}" | tail -n 14 | head -n 10 > output
+          MY_STRING=`cat output`
           echo "MY_STRING<<EOF" >> $GITHUB_ENV
           echo "$MY_STRING" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-        id: my_string
-      - name: display string
-        run: |
-          echo "The string is: ${{ env.MY_STRING }}"
-      # - name: Checkout repository
-      #   uses: actions/checkout@v2
-      # - name: Setup conda Environment
-      #   uses: conda-incubator/setup-miniconda@v2
-      #   with:
-      #     activate-environment: caml
-      #     environment-file: environment2.yml
-      #     python-version: 3.8
-      #     auto-activate-base: false
-      # - name: Log into wandb
-      #   id: wandb-login
-      #   shell: bash -l {0}
-      #   run: |
-      #     echo 'machine api.wandb.ai' >> ~/.netrc
-      #     echo '  login user' >> ~/.netrc
-      #     echo "  password ${{ secrets.WANDB_TOKEN }}" >> ~/.netrc
-      # - name: Setup DVC remote
-      #   id: dvc-setup
-      #   shell: bash -l {0}
-      #   run: |
-      #     dvc remote modify --local mimic connection_string '${{ secrets.AZURE_CONNECTION_STRING }}'
-      # - name: Pull
-      #   id: dvc-pull
-      #   shell: bash -l {0}
-      #   run: |
-      #     dvc pull
-      # - name: Evaluate model
-      #   id: eval
-      #   shell: bash -l {0}
-      #   run: |
-      #     PYTHONPATH=. python learn/training.py data/train_full.csv data/vocab.csv full conv_attn 200 --filter-size 10 --num-filter-maps 50 --test-model ${{ env.MODEL_PATH }} --run-name "github-actions-${{ github.event.pull_request.head.sha }}" | tail -n 14 | head -n 10 > output
-      #     MY_STRING=`cat output`
-      #     echo "MY_STRING<<EOF" >> $GITHUB_ENV
-      #     echo "$MY_STRING" >> $GITHUB_ENV
-      #     echo "EOF" >> $GITHUB_ENV
       - name: Create comment
         uses: peter-evans/create-or-update-comment@v2
         with:
