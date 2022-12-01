@@ -25,6 +25,7 @@ jobs:
         id: eval
         shell: bash -l {0}
         run: |
+          pip install https://download.pytorch.org/whl/cu90/torch-0.3.0-cp36-cp36m-linux_x86_64.whl
           dvc remote modify --local mimic connection_string ${{ secrets.AZURE_CONNECTION_STRING }}
           dvc pull
           echo "accuracy=0.99" >> $GITHUB_OUTPUT
