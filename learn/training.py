@@ -204,8 +204,8 @@ def train(model, optimizer, Y, epoch, batch_size, data_path, gpu, version, dicts
         loss.backward()
         optimizer.step()
 
-        losses.append(loss.data[0])
-
+        # losses.append(loss.data[0])
+        losses.append(loss.item())
         if not quiet and batch_idx % print_every == 0:
             #print the average loss of the last 10 batches
             print("Train epoch: {} [batch #{}, batch_size {}, seq length {}]\tLoss: {:.6f}".format(
@@ -269,7 +269,8 @@ def test(model, Y, epoch, data_path, fold, gpu, version, code_inds, dicts, sampl
 
         output = F.sigmoid(output)
         output = output.data.cpu().numpy()
-        losses.append(loss.data[0])
+        #losses.append(loss.data[0])
+        losses.append(loss.item())
         target_data = target.data.cpu().numpy()
         if get_attn and samples:
             interpret.save_samples(data, output, target_data, alpha, window_size, epoch, tp_file, fp_file, dicts=dicts)

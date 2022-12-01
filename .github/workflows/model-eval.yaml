@@ -18,22 +18,22 @@ jobs:
         uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: caml
-          environment-file: environment.yml
-          python-version: 3.6
+          environment-file: environment2.yml
+          python-version: 3.8
           auto-activate-base: false
       - name: Evaluate model
         id: eval
         shell: bash -l {0}
         run: |
-          pip install https://download.pytorch.org/whl/cu90/torch-0.3.0-cp36-cp36m-linux_x86_64.whl
           dvc remote modify --local mimic connection_string ${{ secrets.AZURE_CONNECTION_STRING }}
           dvc pull
-          echo "accuracy=0.99" >> $GITHUB_OUTPUT
+          PYTHONPATH=. CUDA_VISIBLE_DEVICES=1 WANDB_MODE='disabled'  python learn/training.py mimicdata/mimic3/train_full.csv mimicdata/mimic3/vocab.csv full conv_attn 200 --filter-size 10 --num-filter-maps 50 --test-model predictions/reproCAML_mimic3_full/model.pth --gpu | tail -n 14 | head -n 10 >> $GITHUB_OUTPUT
       - name: Create comment
         uses: peter-evans/create-or-update-comment@v2
         with:
           issue-number: ${{ github.event.number }}
           body: |
-            Accuracy: ${{ steps.eval.outputs.accuracy }}
+            Eval score: 
+            ${{ steps.eval.outputs.accuracy }}
             [1]: https://github.com/peter-evans/create-or-update-comment
         # PYTHONPATH=. python learn/training.py train_full.csv vocab.csv full conv_attn 200 --filter-size 10 --num-filter-maps 50 --dropout 0.2 --patience 10 --lr 0.0001 --test-model predictions/reproCAML_mimic3_full/model.pth
