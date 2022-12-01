@@ -2,7 +2,7 @@ name: Evaluate model on Pull request
 
 on:
   pull_request:
-    types: ["opened", "reopened"]
+    types: ["opened", "reopened", "synchronize"]
 
 env:
   MODEL_PATH: predictions/CAML_mimic3_full/model.pth
