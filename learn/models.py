@@ -5,7 +5,10 @@ from gensim.models import KeyedVectors
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn.init import xavier_uniform_ as xavier_uniform
+try:
+    from torch.nn.init import xavier_uniform_ as xavier_uniform
+except ImportError:
+    from torch.nn.init import xavier_uniform
 from torch.autograd import Variable
 
 import numpy as np
@@ -175,21 +178,15 @@ class ConvAttnPool(BaseModel):
     def forward(self, x, target=None, desc_data=None, get_attention=True):
         #get embeddings and apply dropout
         x = self.embed(x)
-        print(x.shape, "after embed")
         x = self.embed_drop(x)
 
-        print(x.shape, "after embed drop")
         x = x.transpose(1, 2)
 
-        print(x.shape, "after trans")
 
         #apply convolution and nonlinearity (tanh)
         x = self.conv(x)
-        print(x.shape, "after conv")
         x = x.transpose(1,2)
-        print(x.shape, "after transpose")
         x = F.tanh(x)
-        print(x.shape, "after tanh")
         #apply attention
         alpha = F.softmax(self.U.weight.matmul(x.transpose(1,2)), dim=2)
         #document representations are weighted sums using the attention. Can compute all at once as a matmul

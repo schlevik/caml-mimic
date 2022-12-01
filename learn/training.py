@@ -252,11 +252,6 @@ def test(model, Y, epoch, data_path, fold, gpu, version, code_inds, dicts, sampl
     gen = datasets.data_generator(filename, dicts, 1, num_labels, version=version, desc_embed=desc_embed)
     for batch_idx, tup in tqdm(enumerate(gen)):
         data, target, hadm_ids, _, descs = tup
-        if 151432 in hadm_ids:
-            print(data)
-            print(target)
-            print(hadm_ids)
-            assert False
         data, target = Variable(torch.LongTensor(data), volatile=True), Variable(torch.FloatTensor(target))
         if gpu:
             data = data.cuda()
